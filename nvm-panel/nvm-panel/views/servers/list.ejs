@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Servers | <%= settings.panel_name || 'NVM Panel' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <% if (settings.panel_bg) { %><style>body{background-image:url('<%= settings.panel_bg %>');background-size:cover;background-attachment:fixed;}</style><% } %>
+</head>
+<body class="has-sidebar">
+<%- include('../partials/sidebar') %>
+<div class="main-wrapper">
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+    <div class="topbar-breadcrumb"><i class="fas fa-hdd"></i> My Servers</div>
+    <div class="topbar-right"><span class="topbar-user"><i class="fas fa-user"></i> <%= user.username %></span></div>
+  </header>
+  <main class="content">
+    <% if (success && success.length) { %><div class="alert alert-success"><i class="fas fa-check-circle"></i> <%= success %></div><% } %>
+    <% if (error && error.length) { %><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> <%= error %></div><% } %>
+
+    <div class="page-header"><h2><i class="fas fa-hdd"></i> My Servers</h2></div>
+
+    <div class="server-grid">
+      <% if (!servers.length) { %>
+        <div class="empty-state full-width"><i class="fas fa-server fa-4x"></i><h3>No servers yet</h3><p>Contact an admin to provision a server for you.</p></div>
+      <% } else { %>
+        <% servers.forEach(s => { %>
+        <div class="server-card">
+          <div class="server-card-header">
+            <div class="server-type-icon <%= s.type %>">
+              <i class="fas fa-<%= s.type==='kvm'?'microchip':'cube' %>"></i>
+            </div>
+            <div class="server-name-block">
+              <h3><%= s.name %></h3>
+              <span class="badge badge-<%= s.type %>"><%= s.type.toUpperCase() %></span>
+            </div>
+            <span class="status-badge status-<%= s.status %>"><span class="status-dot"></span><%= s.status %></span>
+          </div>
+          <div class="server-card-info">
+            <div class="server-info-row"><i class="fas fa-sitemap"></i> <strong>Node:</strong> <%= s.node_name || 'N/A' %></div>
+            <% if (s.ip) { %><div class="server-info-row"><i class="fas fa-network-wired"></i> <strong>IP:</strong> <%= s.ip %></div><% } %>
+            <div class="server-info-row"><i class="fas fa-memory"></i> <strong>RAM:</strong> <%= s.memory %>MB</div>
+            <div class="server-info-row"><i class="fas fa-microchip"></i> <strong>CPU:</strong> <%= s.cpus %> vCPU</div>
+            <div class="server-info-row"><i class="fas fa-database"></i> <strong>Disk:</strong> <%= s.disk %>GB</div>
+          </div>
+          <div class="server-card-actions">
+            <a href="/vm/<%= s.id %>/console" class="btn btn-sm btn-dark"><i class="fas fa-terminal"></i> Console</a>
+            <a href="/vm/<%= s.id %>/files" class="btn btn-sm btn-secondary"><i class="fas fa-folder"></i> Files</a>
+            <a href="/vm/<%= s.id %>/ports" class="btn btn-sm btn-secondary"><i class="fas fa-network-wired"></i> Ports</a>
+          </div>
+        </div>
+        <% }) %>
+      <% } %>
+    </div>
+  </main>
+</div>
+<script src="/js/main.js"></script>
+</body>
+</html>

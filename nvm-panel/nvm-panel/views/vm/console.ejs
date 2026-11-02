@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= server.name %> - Console | <%= settings.panel_name || 'NVM Panel' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+  <% if (settings.panel_bg) { %><style>body{background-image:url('<%= settings.panel_bg %>');background-size:cover;background-attachment:fixed;}</style><% } %>
+</head>
+<body class="has-sidebar">
+<%- include('../partials/sidebar') %>
+<div class="main-wrapper">
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+    <div class="topbar-breadcrumb"><i class="fas fa-terminal"></i> <%= server.name %> &rsaquo; Console</div>
+    <div class="topbar-right"><span class="topbar-user"><i class="fas fa-user"></i> <%= user.username %></span></div>
+  </header>
+  <main class="content content-console">
+    <% if (success && success.length) { %><div class="alert alert-success"><i class="fas fa-check-circle"></i> <%= success %></div><% } %>
+    <% if (error && error.length) { %><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> <%= error %></div><% } %>
+
+    <!-- Power Controls -->
+    <div class="console-controls card mb-3">
+      <div class="card-body d-flex align-items-center gap-3 flex-wrap">
+        <span class="server-status-indicator">
+          <span class="status-badge status-<%= server.status %>" id="serverStatus">
+            <span class="status-dot"></span> <span id="statusText"><%= server.status %></span>
+          </span>
+        </span>
+        <button class="btn btn-success btn-sm" onclick="vmControl('start')"><i class="fas fa-play"></i> Start</button>
+        <button class="btn btn-danger btn-sm" onclick="vmControl('stop')"><i class="fas fa-stop"></i> Stop</button>
+        <button class="btn btn-warning btn-sm" onclick="vmControl('restart')"><i class="fas fa-sync"></i> Restart</button>
+        <% if (server.type === 'kvm') { %>
+        <button class="btn btn-secondary btn-sm" onclick="vmControl('reboot')"><i class="fas fa-redo"></i> Reboot</button>
+        <% } %>
+        <button class="btn btn-primary btn-sm ms-auto" id="connectBtn" onclick="connectConsole()"><i class="fas fa-terminal"></i> Connect</button>
+        <button class="btn btn-dark btn-sm" id="disconnectBtn" onclick="disconnectConsole()" style="display:none"><i class="fas fa-times"></i> Disconnect</button>
+      </div>
+    </div>
+
+    <!-- Terminal -->
+    <div class="card console-card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <span class="console-dot red"></span>
+        <span class="console-dot yellow"></span>
+        <span class="console-dot green"></span>
+        <span class="ms-3"><%= server.name %> &mdash; <%= server.type.toUpperCase() %></span>
+      </div>
+      <div class="card-body p-0">
+        <div id="terminal-container"></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/main.js"></script>
+<script>
+const SERVER_ID = <%- server.id %>;
+const SESSION_USER = <%- JSON.stringify(user) %>;
+let term, fitAddon, socket, connected = false;
+
+function initTerminal() {
+  term = new Terminal({
+    theme: { background: '#0d1117', foreground: '#c9d1d9', cursor: '#58a6ff', selection: 'rgba(88,166,255,0.3)' },
+    fontSize: 14, fontFamily: '"Cascadia Code", "Fira Code", monospace',
+    cursorBlink: true, scrollback: 5000
+  });
+  fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+  term.open(document.getElementById('terminal-container'));
+  fitAddon.fit();
+  term.writeln('\x1b[1;32m  NVM Panel Console\x1b[0m');
+  term.writeln('\x1b[90m  Click "Connect" to start a terminal session.\x1b[0m\r\n');
+
+  window.addEventListener('resize', () => { if (connected) fitAddon.fit(); });
+  term.onData(data => { if (socket && connected) socket.emit('console-input', data); });
+}
+
+function connectConsole() {
+  if (connected) return;
+  if (!socket) socket = io();
+
+  socket.on('connect', () => {
+    socket.emit('start-console', { serverId: SERVER_ID, sessionData: { user: SESSION_USER } });
+    term.writeln('\x1b[90m  Connecting...\x1b[0m');
+  });
+  socket.on('console-connected', () => {
+    connected = true;
+    document.getElementById('connectBtn').style.display = 'none';
+    document.getElementById('disconnectBtn').style.display = '';
+    term.writeln('\x1b[1;32m  Connected!\x1b[0m\r\n');
+  });
+  socket.on('console-data', data => { term.write(data); });
+  socket.on('console-error', msg => {
+    term.writeln('\r\n\x1b[1;31m  Error: ' + msg + '\x1b[0m');
+  });
+  socket.on('disconnect', () => {
+    connected = false;
+    document.getElementById('connectBtn').style.display = '';
+    document.getElementById('disconnectBtn').style.display = 'none';
+    term.writeln('\r\n\x1b[90m  Disconnected.\x1b[0m');
+  });
+}
+
+function disconnectConsole() {
+  if (socket) { socket.disconnect(); socket = null; }
+  connected = false;
+  document.getElementById('connectBtn').style.display = '';
+  document.getElementById('disconnectBtn').style.display = 'none';
+  term.writeln('\r\n\x1b[90m  Session closed.\x1b[0m');
+}
+
+function vmControl(action) {
+  fetch(`/vm/${SERVER_ID}/control`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action })
+  }).then(r => r.json()).then(data => {
+    if (data.success) {
+      const badge = document.getElementById('serverStatus');
+      const text = document.getElementById('statusText');
+      badge.className = 'status-badge status-' + data.status;
+      text.textContent = data.status;
+      term.writeln(`\r\n\x1b[1;32m  Action "${action}" executed: ${data.message}\x1b[0m`);
+    } else {
+      term.writeln(`\r\n\x1b[1;31m  Error: ${data.message}\x1b[0m`);
+    }
+  }).catch(e => alert('Error: ' + e.message));
+}
+
+window.addEventListener('load', initTerminal);
+</script>
+</body>
+</html>

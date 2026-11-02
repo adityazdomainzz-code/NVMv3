@@ -1,0 +1,91 @@
+<%
+const isAdmin = user && user.role === 'admin';
+const current = locals.active || '';
+%>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <% if (settings.panel_logo) { %>
+      <img src="<%= settings.panel_logo %>" alt="Logo" class="sidebar-logo">
+    <% } else { %>
+      <div class="sidebar-icon-logo">
+        <i class="fas fa-server"></i>
+      </div>
+    <% } %>
+    <span class="sidebar-title"><%= settings.panel_name || 'NVM Panel' %></span>
+  </div>
+
+  <div class="sidebar-section-label">Main</div>
+  <nav class="sidebar-nav">
+    <a href="/dashboard" class="nav-item <%= current === 'dashboard' ? 'active' : '' %>">
+      <i class="fas fa-tachometer-alt"></i>
+      <span>Dashboard</span>
+    </a>
+    <a href="/servers" class="nav-item <%= current === 'servers' ? 'active' : '' %>">
+      <i class="fas fa-hdd"></i>
+      <span>My Servers</span>
+    </a>
+  </nav>
+
+  <% if (locals.server) { %>
+  <div class="sidebar-section-label">Server: <%= server.name %></div>
+  <nav class="sidebar-nav">
+    <a href="/vm/<%= server.id %>/console" class="nav-item <%= current === 'vm-console' ? 'active' : '' %>">
+      <i class="fas fa-terminal"></i>
+      <span>Console</span>
+    </a>
+    <a href="/vm/<%= server.id %>/files" class="nav-item <%= current === 'vm-files' ? 'active' : '' %>">
+      <i class="fas fa-folder-open"></i>
+      <span>File Manager</span>
+    </a>
+    <a href="/vm/<%= server.id %>/ports" class="nav-item <%= current === 'vm-ports' ? 'active' : '' %>">
+      <i class="fas fa-network-wired"></i>
+      <span>Port Forward</span>
+    </a>
+    <a href="/vm/<%= server.id %>/subusers" class="nav-item <%= current === 'vm-subusers' ? 'active' : '' %>">
+      <i class="fas fa-users"></i>
+      <span>Sub Users</span>
+    </a>
+  </nav>
+  <% } %>
+
+  <% if (isAdmin) { %>
+  <div class="sidebar-section-label">Admin Panel</div>
+  <nav class="sidebar-nav">
+    <a href="/admin" class="nav-item <%= current === 'admin' ? 'active' : '' %>">
+      <i class="fas fa-shield-alt"></i>
+      <span>Overview</span>
+    </a>
+    <a href="/admin/settings" class="nav-item <%= current === 'admin-settings' ? 'active' : '' %>">
+      <i class="fas fa-cog"></i>
+      <span>Panel Settings</span>
+    </a>
+    <a href="/admin/nodes" class="nav-item <%= current === 'admin-nodes' ? 'active' : '' %>">
+      <i class="fas fa-sitemap"></i>
+      <span>Nodes</span>
+    </a>
+    <a href="/admin/servers" class="nav-item <%= current === 'admin-servers' ? 'active' : '' %>">
+      <i class="fas fa-server"></i>
+      <span>Servers</span>
+    </a>
+    <a href="/admin/users" class="nav-item <%= current === 'admin-users' ? 'active' : '' %>">
+      <i class="fas fa-user-shield"></i>
+      <span>Users</span>
+    </a>
+  </nav>
+  <% } %>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user-info">
+      <div class="user-avatar">
+        <i class="fas fa-user-circle"></i>
+      </div>
+      <div class="user-details">
+        <span class="user-name"><%= user ? user.username : 'Guest' %></span>
+        <span class="user-role badge-<%= user ? user.role : 'user' %>"><%= user ? user.role : '' %></span>
+      </div>
+    </div>
+    <a href="/logout" class="logout-btn" title="Logout">
+      <i class="fas fa-sign-out-alt"></i>
+    </a>
+  </div>
+</aside>

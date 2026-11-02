@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nodes | <%= settings.panel_name || 'NVM Panel' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <% if (settings.panel_bg) { %><style>body{background-image:url('<%= settings.panel_bg %>');background-size:cover;background-attachment:fixed;}</style><% } %>
+</head>
+<body class="has-sidebar">
+<%- include('../partials/sidebar') %>
+<div class="main-wrapper">
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+    <div class="topbar-breadcrumb"><i class="fas fa-sitemap"></i> Admin &rsaquo; Nodes</div>
+    <div class="topbar-right"><span class="topbar-user"><i class="fas fa-user-shield"></i> <%= user.username %></span></div>
+  </header>
+  <main class="content">
+    <% if (success && success.length) { %><div class="alert alert-success"><i class="fas fa-check-circle"></i> <%= success %></div><% } %>
+    <% if (error && error.length) { %><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> <%= error %></div><% } %>
+
+    <div class="page-header"><h2><i class="fas fa-sitemap"></i> Nodes</h2></div>
+
+    <!-- Add Node -->
+    <div class="card mb-4">
+      <div class="card-header"><i class="fas fa-plus-circle"></i> Add Node</div>
+      <div class="card-body">
+        <div class="info-box mb-3">
+          <i class="fas fa-info-circle"></i>
+          <strong>Local Node</strong> is created automatically and runs on this server. 
+          Add <strong>Remote Nodes</strong> for additional hosts via SSH.
+        </div>
+        <form method="POST" action="/admin/nodes/add">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Node Name <span class="required">*</span></label>
+              <input type="text" name="name" class="form-control" placeholder="e.g. Node-EU-1" required>
+            </div>
+            <div class="form-group">
+              <label>Host / IP <span class="required">*</span></label>
+              <input type="text" name="host" class="form-control" placeholder="e.g. 192.168.1.10" required>
+            </div>
+            <div class="form-group">
+              <label>SSH Port</label>
+              <input type="number" name="port" class="form-control" value="22" min="1" max="65535">
+            </div>
+            <div class="form-group">
+              <label>SSH User</label>
+              <input type="text" name="ssh_user" class="form-control" value="root">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>SSH Password</label>
+              <input type="password" name="ssh_password" class="form-control" placeholder="Leave blank if using key">
+            </div>
+            <div class="form-group">
+              <label>SSH Key Path (on server)</label>
+              <input type="text" name="ssh_key" class="form-control" placeholder="e.g. /root/.ssh/id_rsa">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Add Node</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Node List -->
+    <div class="card">
+      <div class="card-header"><i class="fas fa-list"></i> All Nodes (<%= nodes.length %>)</div>
+      <div class="card-body p-0">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Host</th><th>Port</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            <% nodes.forEach(n => { %>
+            <tr>
+              <td><i class="fas fa-server"></i> <%= n.name %></td>
+              <td><code><%= n.host %>:<%= n.port %></code></td>
+              <td><%= n.port %></td>
+              <td>
+                <% if (n.is_local) { %>
+                  <span class="badge badge-green"><i class="fas fa-home"></i> Local</span>
+                <% } else { %>
+                  <span class="badge badge-blue"><i class="fas fa-cloud"></i> Remote</span>
+                <% } %>
+              </td>
+              <td><span class="status-badge status-<%= n.status === 'online' ? 'running' : 'stopped' %>"><span class="status-dot"></span> <%= n.status || 'unknown' %></span></td>
+              <td>
+                <% if (!n.is_local) { %>
+                  <form method="POST" action="/admin/nodes/delete/<%= n.id %>" style="display:inline">
+                    <button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('Delete node <%= n.name %>?')">
+                      <i class="fas fa-trash"></i> Delete
+                    </button>
+                  </form>
+                <% } else { %>
+                  <span class="text-muted"><i class="fas fa-lock"></i> Protected</span>
+                <% } %>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Servers | <%= settings.panel_name || 'NVM Panel' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <% if (settings.panel_bg) { %><style>body{background-image:url('<%= settings.panel_bg %>');background-size:cover;background-attachment:fixed;}</style><% } %>
+</head>
+<body class="has-sidebar">
+<%- include('../partials/sidebar') %>
+<div class="main-wrapper">
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+    <div class="topbar-breadcrumb"><i class="fas fa-server"></i> Admin &rsaquo; Servers</div>
+    <div class="topbar-right"><span class="topbar-user"><i class="fas fa-user-shield"></i> <%= user.username %></span></div>
+  </header>
+  <main class="content">
+    <% if (success && success.length) { %><div class="alert alert-success"><i class="fas fa-check-circle"></i> <%= success %></div><% } %>
+    <% if (error && error.length) { %><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> <%= error %></div><% } %>
+
+    <div class="page-header"><h2><i class="fas fa-server"></i> Server Management</h2></div>
+
+    <!-- Create Server -->
+    <div class="card mb-4">
+      <div class="card-header"><i class="fas fa-plus-circle"></i> Create Server</div>
+      <div class="card-body">
+        <form method="POST" action="/admin/servers/create">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Server Name <span class="required">*</span></label>
+              <input type="text" name="name" class="form-control" placeholder="e.g. web-server-1" required>
+            </div>
+            <div class="form-group">
+              <label>Node <span class="required">*</span></label>
+              <select name="node_id" class="form-control" required>
+                <option value="">Select node...</option>
+                <% nodes.forEach(n => { %>
+                  <option value="<%= n.id %>"><%= n.name %> (<%= n.host %>)<%= n.is_local ? ' [Local]' : '' %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Container Type <span class="required">*</span></label>
+              <select name="type" class="form-control" required>
+                <option value="lxc">LXC Container</option>
+                <option value="kvm">KVM Virtual Machine</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Owner</label>
+              <select name="owner_id" class="form-control">
+                <option value="">Self (Admin)</option>
+                <% users.forEach(u => { %>
+                  <option value="<%= u.id %>"><%= u.username %></option>
+                <% }) %>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>VM/Container ID (optional)</label>
+              <input type="number" name="vmid" class="form-control" placeholder="e.g. 100, 101...">
+            </div>
+            <div class="form-group">
+              <label>RAM (MB)</label>
+              <input type="number" name="memory" class="form-control" value="512" min="64">
+            </div>
+            <div class="form-group">
+              <label>vCPUs</label>
+              <input type="number" name="cpus" class="form-control" value="1" min="1">
+            </div>
+            <div class="form-group">
+              <label>Disk (GB)</label>
+              <input type="number" name="disk" class="form-control" value="8" min="1">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create Server</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Server List -->
+    <div class="card">
+      <div class="card-header"><i class="fas fa-list"></i> All Servers (<%= servers.length %>)</div>
+      <div class="card-body p-0">
+        <% if (!servers.length) { %>
+          <div class="empty-state"><i class="fas fa-server fa-3x"></i><p>No servers created yet.</p></div>
+        <% } else { %>
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Type</th><th>Node</th><th>Owner</th><th>Status</th><th>Resources</th><th>Actions</th></tr></thead>
+            <tbody>
+              <% servers.forEach(s => { %>
+              <tr>
+                <td><i class="fas fa-<%= s.type==='kvm'?'microchip':'cube' %>"></i> <%= s.name %></td>
+                <td><span class="badge badge-<%= s.type %>"><%= s.type.toUpperCase() %></span></td>
+                <td><%= s.node_name || 'N/A' %></td>
+                <td><%= s.owner || 'Admin' %></td>
+                <td><span class="status-badge status-<%= s.status %>"><span class="status-dot"></span> <%= s.status %></span></td>
+                <td><small><%= s.memory %>MB / <%= s.cpus %>vCPU / <%= s.disk %>GB</small></td>
+                <td class="d-flex gap-2">
+                  <a href="/vm/<%= s.id %>" class="btn btn-xs btn-primary"><i class="fas fa-external-link-alt"></i></a>
+                  <form method="POST" action="/admin/servers/delete/<%= s.id %>" style="display:inline">
+                    <button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('Delete server <%= s.name %>?')">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        <% } %>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/main.js"></script>
+</body>
+</html>

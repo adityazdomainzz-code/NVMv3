@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' | ' : '' %><%= settings.panel_name || 'NVM Panel' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <%- typeof extraHead !== 'undefined' ? extraHead : '' %>
+  <% if (settings.panel_bg) { %>
+  <style>body { background-image: url('<%= settings.panel_bg %>'); background-size: cover; background-attachment: fixed; }</style>
+  <% } %>
+</head>
+<body class="has-sidebar">
+  <%- include('sidebar') %>
+  <div class="main-wrapper">
+    <header class="topbar">
+      <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="topbar-breadcrumb">
+        <span><%= typeof title !== 'undefined' ? title : '' %></span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-user"><i class="fas fa-user"></i> <%= user ? user.username : '' %></span>
+      </div>
+    </header>
+    <main class="content">
+      <% if (success && success.length) { %>
+        <div class="alert alert-success"><i class="fas fa-check-circle"></i> <%= success %></div>
+      <% } %>
+      <% if (error && error.length) { %>
+        <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> <%= error %></div>
+      <% } %>
+      <%- body %>
+    </main>
+  </div>
+  <script src="/js/main.js"></script>
+  <%- typeof extraScripts !== 'undefined' ? extraScripts : '' %>
+</body>
+</html>

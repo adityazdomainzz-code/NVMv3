@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users | <%= settings.panel_name || 'NVM Panel' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <% if (settings.panel_bg) { %><style>body{background-image:url('<%= settings.panel_bg %>');background-size:cover;background-attachment:fixed;}</style><% } %>
+</head>
+<body class="has-sidebar">
+<%- include('../partials/sidebar') %>
+<div class="main-wrapper">
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+    <div class="topbar-breadcrumb"><i class="fas fa-users"></i> Admin &rsaquo; Users</div>
+    <div class="topbar-right"><span class="topbar-user"><i class="fas fa-user-shield"></i> <%= user.username %></span></div>
+  </header>
+  <main class="content">
+    <% if (success && success.length) { %><div class="alert alert-success"><i class="fas fa-check-circle"></i> <%= success %></div><% } %>
+    <% if (error && error.length) { %><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> <%= error %></div><% } %>
+
+    <div class="page-header"><h2><i class="fas fa-users"></i> User Management</h2></div>
+
+    <!-- Create User -->
+    <div class="card mb-4">
+      <div class="card-header"><i class="fas fa-user-plus"></i> Create User</div>
+      <div class="card-body">
+        <form method="POST" action="/admin/users/create">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Username <span class="required">*</span></label>
+              <input type="text" name="username" class="form-control" placeholder="username" required>
+            </div>
+            <div class="form-group">
+              <label>Password <span class="required">*</span></label>
+              <input type="password" name="password" class="form-control" placeholder="password" required>
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" name="email" class="form-control" placeholder="user@example.com">
+            </div>
+            <div class="form-group">
+              <label>Role</label>
+              <select name="role" class="form-control">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Create User</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- User List -->
+    <div class="card">
+      <div class="card-header"><i class="fas fa-list"></i> All Users (<%= users.length %>)</div>
+      <div class="card-body p-0">
+        <table class="data-table">
+          <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody>
+            <% users.forEach(u => { %>
+            <tr>
+              <td><i class="fas fa-user"></i> <%= u.username %></td>
+              <td><%= u.email || 'N/A' %></td>
+              <td><span class="badge badge-<%= u.role %>"><%= u.role %></span></td>
+              <td><%= u.created_at %></td>
+              <td class="d-flex gap-2">
+                <!-- Reset Password -->
+                <button class="btn btn-xs btn-warning" onclick="showResetPwd(<%= u.id %>, '<%= u.username %>')">
+                  <i class="fas fa-key"></i> Reset
+                </button>
+                <% if (u.id !== user.id) { %>
+                <form method="POST" action="/admin/users/delete/<%= u.id %>" style="display:inline">
+                  <button type="submit" class="btn btn-xs btn-danger" onclick="return confirm('Delete user <%= u.username %>?')">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+                <% } else { %>
+                  <span class="text-muted badge">You</span>
+                <% } %>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div class="modal-overlay" id="resetModal" style="display:none">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3><i class="fas fa-key"></i> Reset Password: <span id="resetUsername"></span></h3>
+          <button class="modal-close" onclick="document.getElementById('resetModal').style.display='none'"><i class="fas fa-times"></i></button>
+        </div>
+        <form method="POST" id="resetForm">
+          <div class="modal-body">
+            <div class="form-group">
+              <label>New Password</label>
+              <input type="password" name="new_password" class="form-control" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-warning"><i class="fas fa-key"></i> Reset Password</button>
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('resetModal').style.display='none'">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/main.js"></script>
+<script>
+function showResetPwd(id, username) {
+  document.getElementById('resetUsername').textContent = username;
+  document.getElementById('resetForm').action = '/admin/users/reset-password/' + id;
+  document.getElementById('resetModal').style.display = 'flex';
+}
+</script>
+</body>
+</html>

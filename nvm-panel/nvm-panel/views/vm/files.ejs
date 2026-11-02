@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= server.name %> - File Manager | <%= settings.panel_name || 'NVM Panel' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <% if (settings.panel_bg) { %><style>body{background-image:url('<%= settings.panel_bg %>');background-size:cover;background-attachment:fixed;}</style><% } %>
+</head>
+<body class="has-sidebar">
+<%- include('../partials/sidebar') %>
+<div class="main-wrapper">
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+    <div class="topbar-breadcrumb"><i class="fas fa-folder-open"></i> <%= server.name %> &rsaquo; File Manager</div>
+    <div class="topbar-right"><span class="topbar-user"><i class="fas fa-user"></i> <%= user.username %></span></div>
+  </header>
+  <main class="content">
+    <!-- Path Bar -->
+    <div class="card mb-3">
+      <div class="card-body d-flex align-items-center gap-2 flex-wrap">
+        <label class="mb-0"><i class="fas fa-folder"></i> Path:</label>
+        <input type="text" id="pathInput" class="form-control path-input" value="/" placeholder="Enter path...">
+        <button class="btn btn-primary btn-sm" onclick="loadFiles()"><i class="fas fa-arrow-right"></i> Go</button>
+        <button class="btn btn-secondary btn-sm" onclick="goUp()"><i class="fas fa-level-up-alt"></i> Up</button>
+        <button class="btn btn-dark btn-sm" onclick="loadFiles('/')"><i class="fas fa-home"></i> Root</button>
+        <span class="text-muted small ms-2">💡 Root = /  (shows /var, /etc, /home etc.)</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fas fa-folder-open"></i> 
+        <span id="currentPath">/</span>
+        <div class="ms-auto d-flex gap-2">
+          <button class="btn btn-xs btn-primary" onclick="showNewFileModal()"><i class="fas fa-plus"></i> New File</button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div id="fileList">
+          <div class="loading-state"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading files...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Editor Modal -->
+    <div class="modal-overlay" id="editorModal" style="display:none">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-header">
+          <h3><i class="fas fa-edit"></i> Edit File: <span id="editFileName"></span></h3>
+          <button class="modal-close" onclick="closeEditor()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <textarea id="editorContent" class="file-editor" rows="20"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-success" onclick="saveFile()"><i class="fas fa-save"></i> Save</button>
+          <button class="btn btn-secondary" onclick="closeEditor()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- New File Modal -->
+    <div class="modal-overlay" id="newFileModal" style="display:none">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3><i class="fas fa-plus"></i> New File</h3>
+          <button class="modal-close" onclick="document.getElementById('newFileModal').style.display='none'"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>File Path</label>
+            <input type="text" id="newFilePath" class="form-control" placeholder="/path/to/file.txt">
+          </div>
+          <div class="form-group">
+            <label>Content</label>
+            <textarea id="newFileContent" class="file-editor" rows="8"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="createFile()"><i class="fas fa-plus"></i> Create</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('newFileModal').style.display='none'">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/main.js"></script>
+<script>
+const SERVER_ID = <%- server.id %>;
+let currentPath = '/';
+let editingPath = '';
+
+function loadFiles(path) {
+  path = path || document.getElementById('pathInput').value || '/';
+  currentPath = path;
+  document.getElementById('pathInput').value = path;
+  document.getElementById('currentPath').textContent = path;
+  document.getElementById('fileList').innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading...</p></div>';
+
+  fetch(`/api/vm/${SERVER_ID}/files?path=` + encodeURIComponent(path))
+    .then(r => r.json()).then(data => {
+      if (!data.success) {
+        document.getElementById('fileList').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle fa-2x"></i><p>${data.message || 'Error loading files'}</p></div>`;
+        return;
+      }
+      if (!data.files.length) {
+        document.getElementById('fileList').innerHTML = '<div class="empty-state"><i class="fas fa-folder-open fa-2x"></i><p>Empty directory</p></div>';
+        return;
+      }
+      let html = '<table class="data-table file-table"><thead><tr><th>Name</th><th>Permissions</th><th>Size</th><th>Actions</th></tr></thead><tbody>';
+      data.files.forEach(f => {
+        const icon = f.isDir ? 'fa-folder text-yellow' : (f.isLink ? 'fa-link text-cyan' : 'fa-file text-gray');
+        html += `<tr>
+          <td class="file-name-cell">
+            <i class="fas ${icon}"></i>
+            ${f.isDir ? `<a href="#" onclick="loadFiles('${f.path}');return false;">${f.name}</a>` : f.name}
+          </td>
+          <td><code>${f.perms}</code></td>
+          <td>${f.size}</td>
+          <td>
+            ${!f.isDir ? `<button class="btn btn-xs btn-primary" onclick="openEditor('${f.path}','${f.name}')"><i class="fas fa-edit"></i></button>` : ''}
+          </td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('fileList').innerHTML = html;
+    }).catch(e => {
+      document.getElementById('fileList').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle fa-2x"></i><p>Error: ${e.message}</p></div>`;
+    });
+}
+
+function goUp() {
+  const parts = currentPath.replace(/\/$/, '').split('/');
+  parts.pop();
+  const parent = parts.join('/') || '/';
+  loadFiles(parent);
+}
+
+function openEditor(path, name) {
+  editingPath = path;
+  document.getElementById('editFileName').textContent = name;
+  document.getElementById('editorContent').value = 'Loading...';
+  document.getElementById('editorModal').style.display = 'flex';
+  fetch(`/api/vm/${SERVER_ID}/file-content?path=` + encodeURIComponent(path))
+    .then(r => r.json()).then(data => {
+      document.getElementById('editorContent').value = data.success ? data.content : ('Error: ' + data.message);
+    });
+}
+
+function saveFile() {
+  const content = document.getElementById('editorContent').value;
+  fetch(`/api/vm/${SERVER_ID}/file-content`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: editingPath, content })
+  }).then(r => r.json()).then(data => {
+    if (data.success) { alert('File saved!'); closeEditor(); }
+    else alert('Error: ' + data.message);
+  });
+}
+
+function closeEditor() { document.getElementById('editorModal').style.display = 'none'; }
+
+function showNewFileModal() {
+  document.getElementById('newFilePath').value = currentPath === '/' ? '/' : currentPath + '/';
+  document.getElementById('newFileContent').value = '';
+  document.getElementById('newFileModal').style.display = 'flex';
+}
+
+function createFile() {
+  const path = document.getElementById('newFilePath').value;
+  const content = document.getElementById('newFileContent').value;
+  if (!path) { alert('Enter a file path'); return; }
+  fetch(`/api/vm/${SERVER_ID}/file-content`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, content })
+  }).then(r => r.json()).then(data => {
+    if (data.success) { document.getElementById('newFileModal').style.display = 'none'; loadFiles(currentPath); }
+    else alert('Error: ' + data.message);
+  });
+}
+
+window.addEventListener('load', () => loadFiles('/'));
+document.getElementById('pathInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadFiles(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | <%= settings.panel_name || 'NVM Panel' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <% if (settings.panel_bg) { %><style>body{background-image:url('<%= settings.panel_bg %>');background-size:cover;background-attachment:fixed;}</style><% } %>
+</head>
+<body class="has-sidebar">
+<%- include('partials/sidebar') %>
+<div class="main-wrapper">
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+    <div class="topbar-breadcrumb"><i class="fas fa-tachometer-alt"></i> Dashboard</div>
+    <div class="topbar-right"><span class="topbar-user"><i class="fas fa-user"></i> <%= user.username %></span></div>
+  </header>
+  <main class="content">
+    <% if (success && success.length) { %><div class="alert alert-success"><i class="fas fa-check-circle"></i> <%= success %></div><% } %>
+    <% if (error && error.length) { %><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> <%= error %></div><% } %>
+
+    <div class="page-header"><h2><i class="fas fa-tachometer-alt"></i> Dashboard</h2></div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon bg-blue"><i class="fas fa-hdd"></i></div>
+        <div class="stat-info"><h3><%= servers.length %></h3><p>Total Servers</p></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-green"><i class="fas fa-play-circle"></i></div>
+        <div class="stat-info"><h3><%= servers.filter(s=>s.status==='running').length %></h3><p>Running</p></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-purple"><i class="fas fa-sitemap"></i></div>
+        <div class="stat-info"><h3><%= nodes.length %></h3><p>Nodes</p></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-orange"><i class="fas fa-users"></i></div>
+        <div class="stat-info"><h3><%= user.role === 'admin' ? totalUsers : '-' %></h3><p><%= user.role === 'admin' ? 'Total Users' : 'My Account' %></p></div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header"><i class="fas fa-id-card"></i> Account Information</div>
+      <div class="card-body">
+        <table class="info-table">
+          <tr><td><strong>Username</strong></td><td><%= userInfo.username %></td></tr>
+          <tr><td><strong>Email</strong></td><td><%= userInfo.email || 'N/A' %></td></tr>
+          <tr><td><strong>Role</strong></td><td><span class="badge badge-<%= userInfo.role %>"><%= userInfo.role %></span></td></tr>
+          <tr><td><strong>Member Since</strong></td><td><%= userInfo.created_at %></td></tr>
+          <tr><td><strong>Servers</strong></td><td><%= servers.length %></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <i class="fas fa-server"></i> My Servers
+        <a href="/servers" class="btn btn-sm btn-primary" style="float:right">View All</a>
+      </div>
+      <div class="card-body p-0">
+        <% if (!servers.length) { %>
+          <div class="empty-state"><i class="fas fa-server fa-3x"></i><p>No servers yet. Ask an admin to create one.</p></div>
+        <% } else { %>
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Type</th><th>Node</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <% servers.slice(0,8).forEach(s => { %>
+              <tr>
+                <td><i class="fas fa-<%= s.type==='kvm'?'microchip':'cube' %>"></i> <%= s.name %></td>
+                <td><span class="badge badge-<%= s.type %>"><%= s.type.toUpperCase() %></span></td>
+                <td><%= s.node_name || 'N/A' %></td>
+                <td><span class="status-badge status-<%= s.status %>"><span class="status-dot"></span><%= s.status %></span></td>
+                <td><a href="/vm/<%= s.id %>" class="btn btn-xs btn-primary"><i class="fas fa-external-link-alt"></i> Open</a></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        <% } %>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/main.js"></script>
+</body>
+</html>
